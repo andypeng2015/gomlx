@@ -31,6 +31,13 @@ gomlx_jit_deps = [
     "@xla//xla/client/lib:self_adjoint_eig",
     "@xla//xla/translate/hlo_to_mhlo:hlo_to_mlir_hlo",
 
+    # PJRT:
+    "@xla//xla/pjrt:tpu_client",
+    "@xla//xla/pjrt/distributed",
+    "@xla//xla/pjrt/gpu:se_gpu_pjrt_client",
+    "@xla//xla/pjrt/distributed:client",
+    #"@xla//compiler/xla/pjrt/distributed:service",
+
     # Do we need these explicitly ?
     "@xla//xla/stream_executor:device_id_utils",
     "@xla//xla/stream_executor:dnn",
@@ -44,11 +51,19 @@ gomlx_jit_deps = [
     # CPU (Host) stream executor / platform support.
     "@xla//xla/service:cpu_plugin",
     "@xla//xla/service/cpu:cpu_compiler",
+    "@xla//xla/stream_executor/platform",
     "@xla//xla/stream_executor/host:host_platform",
+
 ] + if_with_tpu_support([
     # TPU stream executor: do we need to link something form xla/service: ?
     "@xla//xla/stream_executor/tpu:tpu_executor",
-    #
+    "@xla//xla/stream_executor/tpu:tpu_executor_c_api_hdrs",
+    "@xla//xla/stream_executor/tpu:tpu_executor_api",
+    "@xla//xla/stream_executor/tpu:tpu_platform_id",
+    "@xla//xla/service:tpu_computation_placer",
+    "@xla//xla/stream_executor/tpu:tpu_executable",
+    "@xla//xla/stream_executor/tpu:libtftpu_header",
+
 ]) + if_cuda_or_rocm([
     # CUDA or ROCM executor
     "@xla//xla/service:gpu_plugin",
@@ -86,7 +101,7 @@ gomlx_aot_deps = [
 
 cc_library(
     name = "gomlx",
-    srcs = glob(["*.cpp"]),
+    srcs = glob(["*.cpp"], exclude=["platforms.cpp"]),
     hdrs = glob(["*.h"]),
     linkopts = ["-shared"],
     deps = [] + gomlx_jit_deps,
@@ -142,6 +157,22 @@ cc_binary(
     deps = [
         ":gomlx_aot",
     ] + gomlx_aot_deps,
+)
+
+cc_binary(
+    name = "platforms",
+    srcs = [
+        "platforms.cpp",
+    ],
+    deps = [] + gomlx_jit_deps,
+    linkstatic = 1,
+)
+
+cc_binary(
+    name = "tpu_client",
+    srcs = [],
+    deps = ["@xla//xla/python/tpu_driver/client:libtpu_client"],
+    linkstatic = 1,
 )
 
 filegroup(

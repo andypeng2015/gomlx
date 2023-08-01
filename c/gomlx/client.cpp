@@ -39,6 +39,16 @@ using namespace std;
 StatusOr GetPlatforms() {
   StatusOr r{0, 0};
   auto platforms_or = xla::PlatformUtil::GetSupportedPlatforms();
+
+  if (platforms_or.ok()) {
+    cout << "Platforms:" << endl;
+    for (auto &platform : platforms_or.value()) {
+      cout << "\t" << platform->Name() << endl;
+    }
+  } else {
+    cerr << "Failed: " << platforms_or.status() << endl;
+  }
+
   if (!platforms_or.ok()) {
     r.status = FromStatus(platforms_or.status());
     return r;
